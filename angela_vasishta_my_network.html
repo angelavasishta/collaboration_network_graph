@@ -1,0 +1,636 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script>function neighbourhoodHighlight(params) {
+  // console.log("in nieghbourhoodhighlight");
+  allNodes = nodes.get({ returnType: "Object" });
+  // originalNodes = JSON.parse(JSON.stringify(allNodes));
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    highlightActive = true;
+    var i, j;
+    var selectedNode = params.nodes[0];
+    var degrees = 2;
+
+    // mark all nodes as hard to read.
+    for (let nodeId in allNodes) {
+      // nodeColors[nodeId] = allNodes[nodeId].color;
+      allNodes[nodeId].color = "rgba(200,200,200,0.5)";
+      if (allNodes[nodeId].hiddenLabel === undefined) {
+        allNodes[nodeId].hiddenLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+    var connectedNodes = network.getConnectedNodes(selectedNode);
+    var allConnectedNodes = [];
+
+    // get the second degree nodes
+    for (i = 1; i < degrees; i++) {
+      for (j = 0; j < connectedNodes.length; j++) {
+        allConnectedNodes = allConnectedNodes.concat(
+          network.getConnectedNodes(connectedNodes[j])
+        );
+      }
+    }
+
+    // all second degree nodes get a different color and their label back
+    for (i = 0; i < allConnectedNodes.length; i++) {
+      // allNodes[allConnectedNodes[i]].color = "pink";
+      allNodes[allConnectedNodes[i]].color = "rgba(150,150,150,0.75)";
+      if (allNodes[allConnectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[allConnectedNodes[i]].label =
+          allNodes[allConnectedNodes[i]].hiddenLabel;
+        allNodes[allConnectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // all first degree nodes get their own color and their label back
+    for (i = 0; i < connectedNodes.length; i++) {
+      // allNodes[connectedNodes[i]].color = undefined;
+      allNodes[connectedNodes[i]].color = nodeColors[connectedNodes[i]];
+      if (allNodes[connectedNodes[i]].hiddenLabel !== undefined) {
+        allNodes[connectedNodes[i]].label =
+          allNodes[connectedNodes[i]].hiddenLabel;
+        allNodes[connectedNodes[i]].hiddenLabel = undefined;
+      }
+    }
+
+    // the main node gets its own color and its label back.
+    // allNodes[selectedNode].color = undefined;
+    allNodes[selectedNode].color = nodeColors[selectedNode];
+    if (allNodes[selectedNode].hiddenLabel !== undefined) {
+      allNodes[selectedNode].label = allNodes[selectedNode].hiddenLabel;
+      allNodes[selectedNode].hiddenLabel = undefined;
+    }
+  } else if (highlightActive === true) {
+    // console.log("highlightActive was true");
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      // allNodes[nodeId].color = "purple";
+      allNodes[nodeId].color = nodeColors[nodeId];
+      // delete allNodes[nodeId].color;
+      if (allNodes[nodeId].hiddenLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].hiddenLabel;
+        allNodes[nodeId].hiddenLabel = undefined;
+      }
+    }
+    highlightActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    // console.log("Nothing was selected");
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        // console.log(allNodes[nodeId]);
+        // allNodes[nodeId].color = {};
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function filterHighlight(params) {
+  allNodes = nodes.get({ returnType: "Object" });
+  // if something is selected:
+  if (params.nodes.length > 0) {
+    filterActive = true;
+    let selectedNodes = params.nodes;
+
+    // hiding all nodes and saving the label
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = true;
+      if (allNodes[nodeId].savedLabel === undefined) {
+        allNodes[nodeId].savedLabel = allNodes[nodeId].label;
+        allNodes[nodeId].label = undefined;
+      }
+    }
+
+    for (let i=0; i < selectedNodes.length; i++) {
+      allNodes[selectedNodes[i]].hidden = false;
+      if (allNodes[selectedNodes[i]].savedLabel !== undefined) {
+        allNodes[selectedNodes[i]].label = allNodes[selectedNodes[i]].savedLabel;
+        allNodes[selectedNodes[i]].savedLabel = undefined;
+      }
+    }
+
+  } else if (filterActive === true) {
+    // reset all nodes
+    for (let nodeId in allNodes) {
+      allNodes[nodeId].hidden = false;
+      if (allNodes[nodeId].savedLabel !== undefined) {
+        allNodes[nodeId].label = allNodes[nodeId].savedLabel;
+        allNodes[nodeId].savedLabel = undefined;
+      }
+    }
+    filterActive = false;
+  }
+
+  // transform the object into an array
+  var updateArray = [];
+  if (params.nodes.length > 0) {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  } else {
+    for (let nodeId in allNodes) {
+      if (allNodes.hasOwnProperty(nodeId)) {
+        updateArray.push(allNodes[nodeId]);
+      }
+    }
+    nodes.update(updateArray);
+  }
+}
+
+function selectNode(nodes) {
+  network.selectNodes(nodes);
+  neighbourhoodHighlight({ nodes: nodes });
+  return nodes;
+}
+
+function selectNodes(nodes) {
+  network.selectNodes(nodes);
+  filterHighlight({nodes: nodes});
+  return nodes;
+}
+
+function highlightFilter(filter) {
+  let selectedNodes = []
+  let selectedProp = filter['property']
+  if (filter['item'] === 'node') {
+    let allNodes = nodes.get({ returnType: "Object" });
+    for (let nodeId in allNodes) {
+      if (allNodes[nodeId][selectedProp] && filter['value'].includes((allNodes[nodeId][selectedProp]).toString())) {
+        selectedNodes.push(nodeId)
+      }
+    }
+  }
+  else if (filter['item'] === 'edge'){
+    let allEdges = edges.get({returnType: 'object'});
+    // check if the selected property exists for selected edge and select the nodes connected to the edge
+    for (let edge in allEdges) {
+      if (allEdges[edge][selectedProp] && filter['value'].includes((allEdges[edge][selectedProp]).toString())) {
+        selectedNodes.push(allEdges[edge]['from'])
+        selectedNodes.push(allEdges[edge]['to'])
+      }
+    }
+  }
+  selectNodes(selectedNodes)
+}</script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+            
+            
+            
+            
+            
+
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 800px;
+                 background-color: rgba(0, 0, 0, 0);
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"base_size": 49, "borderWidth": 2, "color": {"background": "#ff1693", "border": "#ffffff", "highlight": {"background": "#ff1693", "border": "#ffffff"}, "hover": {"background": "#ff1693", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "university of missouri", "label": "university of missouri", "node_description": "phd \u2014 cultural anthropology (2026) \u0026 ma \u2014 anthropology (2023)", "node_name": "university of missouri", "node_site": "", "node_type": "hub", "shape": "dot", "size": 49}, {"base_size": 43, "borderWidth": 2, "color": {"background": "#ff1693", "border": "#ffffff", "highlight": {"background": "#ff1693", "border": "#ffffff"}, "hover": {"background": "#ff1693", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "william \u0026 mary", "label": "william \u0026 mary", "node_description": "bs \u2014 psychology (honors) \u0026 biology", "node_name": "william \u0026 mary", "node_site": "", "node_type": "hub", "shape": "dot", "size": 43}, {"base_size": 28, "borderWidth": 2, "color": {"background": "#ff1693", "border": "#ffffff", "highlight": {"background": "#ff1693", "border": "#ffffff"}, "hover": {"background": "#ff1693", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "university of california, los angeles", "label": "university of california, los angeles", "node_description": "collaborators", "node_name": "university of california, los angeles", "node_site": "", "node_type": "hub", "shape": "dot", "size": 28}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "karthik panchanathan", "label": "karthik panchanathan", "node_description": "socio-cultural anthropology", "node_name": "karthik panchanathan", "node_site": "https://www.karthikpanchanathan.com/", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "hannah rubin", "label": "hannah rubin", "node_description": "philosophy \u0026 metascience", "node_name": "hannah rubin", "node_site": "https://www.hannahrubin.net/", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "rob walker", "label": "rob walker", "node_description": "socio-cultural anthropology", "node_name": "rob walker", "node_site": "https://anthropology.missouri.edu/people/walker", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "greg blomquist", "label": "greg blomquist", "node_description": "biological anthropology", "node_name": "greg blomquist", "node_site": "https://gregblomquist.gitlab.io/", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "libby cowgill", "label": "libby cowgill", "node_description": "biological anthropology", "node_name": "libby cowgill", "node_site": "https://libbycowgill.phd.sh/", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "lisa sattenspiel", "label": "lisa sattenspiel", "node_description": "biological anthropology", "node_name": "lisa sattenspiel", "node_site": "https://sites.google.com/umsystem.edu/sattenspiell", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "mark hannink", "label": "mark hannink", "node_description": "biochemistry", "node_name": "mark hannink", "node_site": "https://scholar.google.com/citations?user=x7qTItgAAAAJ\u0026hl=en", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "peter cornish", "label": "peter cornish", "node_description": "biochemistry", "node_name": "peter cornish", "node_site": "https://cafnr.missouri.edu/directory/peter-cornish/", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "joanna schug", "label": "joanna schug", "node_description": "socio-cultural psychology", "node_name": "joanna schug", "node_site": "https://www.wm.edu/as/psych-sciences/facultydirectory/schug_j.php", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "joshua puzey", "label": "joshua puzey", "node_description": "evolutionary \u0026 ecological biology", "node_name": "joshua puzey", "node_site": "https://sites.google.com/view/puzey-lab/home", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "m. drew lamar", "label": "m. drew lamar", "node_description": "computational biology", "node_name": "m. drew lamar", "node_site": "https://www.mdlama.me/", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "lee kirkpatrick", "label": "lee kirkpatrick", "node_description": "evolutionary psychology", "node_name": "lee kirkpatrick", "node_site": "https://www.wm.edu/as/psych-sciences/facultydirectory/retired-facultydirectory/kirkpatrick_l.php", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "helen murphy", "label": "helen murphy", "node_description": "evolutionary biology", "node_name": "helen murphy", "node_site": "https://www.helenmurphy.net/", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "pamela hunt", "label": "pamela hunt", "node_description": "psychobiology", "node_name": "pamela hunt", "node_site": "https://www.wm.edu/as/psych-sciences/facultydirectory/hunt_p.php", "node_type": " node ", "shape": "dot", "size": 18}, {"base_size": 18, "borderWidth": 1, "color": {"background": "#513534", "border": "#ffffff", "highlight": {"background": "#513534", "border": "#ffffff"}, "hover": {"background": "#513534", "border": "#ffffff"}}, "font": {"color": "#513534"}, "id": "sean prall", "label": "sean prall", "node_description": "socio-cultural anthropology", "node_name": "sean prall", "node_site": "https://sprall.github.io/", "node_type": " node ", "shape": "dot", "size": 18}]);
+                  edges = new vis.DataSet([{"color": "#ffb6c1", "from": "university of missouri", "length": 350, "to": "william \u0026 mary", "width": 3}, {"color": "#ffb6c1", "from": "william \u0026 mary", "length": 350, "to": "university of california, los angeles", "width": 3}, {"color": "#ffb6c1", "from": "university of california, los angeles", "length": 350, "to": "university of missouri", "width": 3}, {"color": "#948484", "from": "university of missouri", "to": "karthik panchanathan"}, {"color": "#948484", "from": "university of missouri", "to": "hannah rubin"}, {"color": "#948484", "from": "university of missouri", "to": "rob walker"}, {"color": "#948484", "from": "university of missouri", "to": "greg blomquist"}, {"color": "#948484", "from": "university of missouri", "to": "libby cowgill"}, {"color": "#948484", "from": "university of missouri", "to": "lisa sattenspiel"}, {"color": "#948484", "from": "university of missouri", "to": "mark hannink"}, {"color": "#948484", "from": "university of missouri", "to": "peter cornish"}, {"color": "#948484", "from": "william \u0026 mary", "to": "joanna schug"}, {"color": "#948484", "from": "william \u0026 mary", "to": "joshua puzey"}, {"color": "#948484", "from": "william \u0026 mary", "to": "m. drew lamar"}, {"color": "#948484", "from": "william \u0026 mary", "to": "lee kirkpatrick"}, {"color": "#948484", "from": "william \u0026 mary", "to": "helen murphy"}, {"color": "#948484", "from": "william \u0026 mary", "to": "pamela hunt"}, {"color": "#948484", "from": "university of california, los angeles", "to": "sean prall"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"barnesHut": {"gravitationalConstant": -1600, "centralGravity": 0.25, "damping": 0.425, "avoidOverlap": 0.01}, "minVelocity": 0.25}, "interaction": {"hover": true}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    
+<style>
+
+  #mynetwork {
+
+    background-color: transparent !important;
+    border: none !important;
+    outline: none !important;
+    box-shadow: none !important;
+
+  }
+
+  .card {
+
+    background-color: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+
+  }
+
+  body {
+
+    background-color: transparent !important;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+
+  }
+
+  #ui-controls {
+
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 1000;
+
+    background: white;
+    padding: 10px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+
+    font-family: "Helvetica Neue";
+
+    display: flex;
+    gap: 10px;
+
+    }
+
+  #search_input {
+
+    padding: 5px;
+    border: 1px solid #ffe5e5;
+    border-radius: 2px;
+    outline: none;
+
+    font-size: 14px;
+
+    }
+
+  #network_search_button, #freeze_button {
+
+    background-color: #ff1693;
+    color: #fffaf0;
+    padding: 8px 15px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+
+    font-weight: bold;
+    font-size: 14px;
+
+    }
+
+  #freeze_button { background-color: #513534; }
+
+  #network_search_button:hover { background-color: #e11383; }
+
+  #freeze_button:hover { background-color: #412B2A; }
+
+
+  #node_pop_up {
+
+    display: none;
+    position: absolute;
+    width: 280px;
+    z-index: 9999;
+
+    background-color: #fffaf0;
+    padding: 15px;
+    border: 1px solid #fffaf0;
+    border-radius: 8px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+
+    font-family: "Helvetica Neue";
+
+    }
+
+  #node_pop_up h2 {
+
+    margin: 0 0 5px 0;
+
+    color: #ff1693;
+
+    font-size: 15px;
+
+    }
+
+  #node_pop_up p {
+
+    color: #513534;
+    margin: 5px 0 10px 0;
+    line-height: 1.4;
+
+    font-size: 14px;
+
+    }
+
+  #node_pop_up a.visit-btn {
+
+    display: inline-block;
+    margin-top: 5px;
+
+    background-color: #513534;
+    color: #fffaf0;
+    padding: 8px 15px;
+    border-radius: 15px;
+
+    font-weight: bold;
+    font-size: 12px;
+    text-decoration: none;
+
+  }
+
+  #node_pop_up a.visit-btn:hover { background-color: #412B2A; }
+
+  #close-btn {
+
+    position: absolute;
+    top: 5px;
+    right: 10px;
+
+    color: #ffe5e5;
+    cursor: pointer;
+
+    font-size: 18px;
+
+    }
+
+</style>
+
+<div id = "ui-controls">
+
+  <input type = "text" id = "search_input" placeholder = "find a collaborator ...">
+  <button id = "network_search_button">search</button>
+  <button id = "freeze_button">freeze</button>
+
+</div>
+
+<div id = "node_pop_up">
+
+  <div id = "close-btn" onclick = "document.getElementById('node_pop_up').style.display='none'">×</div>
+  <h2 id = "node_pop_up_name">Name</h2>
+  <p id = "node_pop_up_description">Description</p> <a id = "node_pop_up_link" href = "#" target = "_blank" class = "visit-btn">visit site</a>
+
+</div>
+
+<script type = "text/javascript">
+
+  window.onload = function(){
+
+    setTimeout( function(){
+
+      var graph_viewing_window = document.getElementById('mynetwork');
+
+      if (graph_viewing_window) {
+
+        graph_viewing_window.style.border = "none";
+        graph_viewing_window.style.backgroundColor = "transparent";
+
+      }
+
+      var network = window.network;
+      var nodes = window.nodes;
+      var network_frozen = false;
+
+      document.getElementById( "network_search_button" ).onclick = function(){
+
+        var user_search_query = document.getElementById( "search_input" ).value.toLowerCase();
+
+          if ( !user_search_query ){
+
+            network.fit( {
+
+              animation: { duration: 1000, easingFunction: 'easeInOutQuad' }
+
+              } );
+
+            return;
+
+          }
+
+        var all_network_nodes = nodes.get();
+
+          var user_search_node_match = all_network_nodes.find( n => n.label.toLowerCase().includes(user_search_query) );
+
+          if ( user_search_node_match ){
+
+            network.focus( user_search_node_match.id, { scale: 1.2, animation: { duration: 1000, easingFunction: 'easeInOutQuad' } } );
+            network.selectNodes( [user_search_node_match.id] );
+
+          } else { alert( "calculating connections ... collaborator not found !" ); }
+
+        };
+
+        document.getElementById( "search_input" ).addEventListener( "keypress" , function( event ){
+
+          if ( event.key === "Enter" ) document.getElementById( "network_search_button" ).click();
+
+        });
+
+        document.getElementById( "freeze_button" ).onclick = function(){
+
+            if ( network_frozen ){
+
+              network.setOptions( { physics: { enabled: true } } );
+              document.getElementById( "freeze_button" ).innerText = "freeze";
+
+              network_frozen = false;
+
+            } else {
+
+              network.setOptions({ physics: { enabled: false } } );
+              document.getElementById( "freeze_button" ).innerText = "unfreeze";
+
+              network_frozen = true;
+
+            }
+
+          };
+
+          var pop_up = document.getElementById( "node_pop_up" );
+
+          var pop_up_name = document.getElementById( "node_pop_up_name" );
+          var pop_up_description = document.getElementById( "node_pop_up_description" );
+          var pop_up_link = document.getElementById( "node_pop_up_link" );
+
+          network.on( "click", function ( params ){
+
+            if ( params.nodes.length > 0 ){
+
+                    var node_identifier = params.nodes[0];
+                    var node = nodes.get( node_identifier );
+
+                    if ( node.node_name ){
+
+                      pop_up_name.innerText = node.node_name;
+
+                      if ( node.node_description ){
+
+                        pop_up_description.innerText = node.node_description;
+                        pop_up_description.style.display = "block";
+
+                        } else {
+
+                          pop_up_description.style.display = "none";
+
+                        }
+
+                      if ( node.node_site ){
+                        pop_up_link.href = node.node_site;
+                        pop_up_link.style.display = "inline-block";
+
+                        } else {
+
+                            pop_up_link.style.display = "none";
+
+                        }
+
+                      var x_click = params.pointer.DOM.x;
+                      var y_click = params.pointer.DOM.y;
+
+                      pop_up.style.left = ( x_click + 15 ) + "px";
+                      pop_up.style.top = ( y_click - 20 ) + "px";
+
+                      pop_up.style.display = "block";
+
+                    }
+
+              } else { pop_up.style.display = "none"; }
+
+          });
+
+          network.on( "hoverNode", function ( params ){
+
+            var node = nodes.get( params.node );
+
+            if ( node.base_size ) nodes.update( { id: params.node, size: node.base_size * 1.6 } );
+
+          });
+
+          network.on( "blurNode" , function ( params ){
+
+            var node = nodes.get( params.node );
+
+            if ( node.base_size ) nodes.update( { id: params.node, size: node.base_size } );
+
+          });
+
+    } , 1000 );
+
+  };
+
+</script>
+
+</body>
+
+</html>
